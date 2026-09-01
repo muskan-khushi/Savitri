@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+/*
+  Savitri design tokens — per SAVITRI_MASTER_UI_PLAN.md Section 2.
+  These are Muskan's actual specified hex values, not our own
+  aesthetic substitutes — followed exactly, not reinterpreted.
+
+  Dawn Mode (warm cream) is the default and only shipped theme for
+  now. Neutral Dark exists in the plan as a toggle-only alternate;
+  its tokens are included below but not wired to a toggle yet.
+*/
+
+:root {
+  /* Primary palette — colorful pastels, the site's main visual voice. */
+  --pastel-yellow: #ffe9a8;
+  --pastel-blue: #aedcf0;
+  --pastel-green: #bfe8c7;
+  --pastel-pink: #ffcbdd;
+  --pastel-peach: #ffc29e;
+
+  --ink: #3a2e4a; /* deep plum-ink — dark text on any pastel above, 8:1+ */
+  --cream: #fffaf0; /* warm off-white base, never stark white */
+
+  /* Dawn gradient — reserved for the Story page's myth narrative only
+     (a deliberate darkness-to-light story beat, not general site
+     chrome). Everywhere else uses the pastel family above. */
+  --indigo-night: #1a1b3a;
+  --dusky-rose: #8b4a6b;
+  --amber-dawn: #e8925a;
+  --soft-gold: #f5c56e;
+
+  /* Grounding earth tones — still used for data/impact contexts where
+     the brighter pastels would feel too playful. */
+  --soil: #4a3728;
+  --terracotta: #c97b54;
+  --leaf: #5c7a5c;
+  --wheat: #e8dcc8;
+  --dawn-cream: #fbf7f0;
+
+  --scroll-bg: var(--cream);
+  --scroll-fg: var(--ink);
+
+  --font-display: var(--font-fraunces);
+  --font-body: var(--font-geist-sans);
+  --font-devanagari: var(--font-noto-devanagari);
+}
+
+@theme inline {
+  --color-pastel-yellow: var(--pastel-yellow);
+  --color-pastel-blue: var(--pastel-blue);
+  --color-pastel-green: var(--pastel-green);
+  --color-pastel-pink: var(--pastel-pink);
+  --color-pastel-peach: var(--pastel-peach);
+  --color-ink: var(--ink);
+  --color-cream: var(--cream);
+
+  --color-indigo-night: var(--indigo-night);
+  --color-dusky-rose: var(--dusky-rose);
+  --color-amber-dawn: var(--amber-dawn);
+  --color-soft-gold: var(--soft-gold);
+
+  --color-soil: var(--soil);
+  --color-terracotta: var(--terracotta);
+  --color-leaf: var(--leaf);
+  --color-wheat: var(--wheat);
+  --color-dawn-cream: var(--dawn-cream);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-devanagari: var(--font-devanagari);
+}
+
+body {
+  background: var(--scroll-bg);
+  color: var(--scroll-fg);
+  font-family: var(--font-body);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+@layer base {
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+  }
+}
+
+/* One shared "sunrise" easing curve, per Section 8 — gentle
+   acceleration, gentle settle, used everywhere instead of a bouncy
+   default, so motion across the whole site feels like one voice. */
+:root {
+  --ease-sunrise: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
