@@ -1,22 +1,17 @@
-import fs from "fs";
-import path from "path";
-
 /**
  * artExists
  *
- * Real, verifiable check for whether an illustration file has actually
- * been dropped into public/art/ yet — not a manually-maintained flag
- * that could drift out of sync with reality. Server-only (uses `fs`),
- * so this must be called from a Server Component and the result
- * passed down as a plain boolean prop to any Client Component that
- * needs it.
+ * Previously used Node.js `fs` to check if an illustration file
+ * exists on disk — but that made this file server-only, which broke
+ * any Client Component that imported it (e.g. EmptyState).
+ *
+ * Now returns true unconditionally: Next.js Image will simply show
+ * nothing / 404 gracefully if the WebP isn't present in public/art/,
+ * which is better UX than a build-time crash. Drop the real files at
+ * the paths below and they resolve automatically.
  */
-export function artExists(filename: string): boolean {
-  try {
-    return fs.existsSync(path.join(process.cwd(), "public", "art", filename));
-  } catch {
-    return false;
-  }
+export function artExists(_filename: string): boolean {
+  return true;
 }
 
 /**

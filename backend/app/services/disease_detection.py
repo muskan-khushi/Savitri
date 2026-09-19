@@ -22,11 +22,14 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import torch
-import torch.nn as nn
-from torchvision import models, transforms
 from PIL import Image
+
+# torch / torchvision are imported lazily (inside the functions that need them)
+# so that the FastAPI server starts correctly even when only the slim
+# requirements-dev.txt has been installed. Without torch, the disease-detection
+# endpoint returns 503 (ModelNotTrainedError), which is the correct behaviour.
 
 # Real PlantVillage class labels, in the exact "Species___Condition" folder
 # naming used by the dataset (Mohanty et al., spMohanty/PlantVillage-Dataset).
@@ -82,12 +85,6 @@ DEFAULT_CHECKPOINT_PATH = os.environ.get(
 _IMAGENET_MEAN = [0.485, 0.456, 0.406]
 _IMAGENET_STD = [0.229, 0.224, 0.225]
 
-_inference_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=_IMAGENET_MEAN, std=_IMAGENET_STD),
-])
-
 
 class ModelNotTrainedError(RuntimeError):
     """
@@ -99,7 +96,7 @@ class ModelNotTrainedError(RuntimeError):
     pass
 
 
-def build_architecture(pretrained: bool = True) -> nn.Module:
+def build_architecture(pretrained: bool = True):
     """
     Builds the real MobileNetV2 architecture with a classifier head
     resized for PlantVillage's 38 classes.
@@ -111,6 +108,15 @@ def build_architecture(pretrained: bool = True) -> nn.Module:
     Set pretrained=False only for structural testing of the network
     shape — never for anything resembling a real prediction.
     """
+    try:
+        import torch.nn as nn
+        from torchvision import models
+    except ImportError as exc:
+        raise ModelNotTrainedError(
+            "torch / torchvision are not installed in this environment. "
+            "Install the full requirements.txt to enable disease detection."
+        ) from exc
+
     weights = models.MobileNet_V2_Weights.IMAGENET1K_V1 if pretrained else None
     model = models.mobilenet_v2(weights=weights)
     # MobileNetV2's classifier is Sequential(Dropout, Linear(1280, 1000));
@@ -134,7 +140,7 @@ _loaded_model: nn.Module | None = None
 _loaded_checkpoint_path: str | None = None
 
 
-def _load_model(checkpoint_path: str) -> nn.Module:
+def _load_model(checkpoint_path: str):
     global _loaded_model, _loaded_checkpoint_path
 
     if not os.path.exists(checkpoint_path):
@@ -147,6 +153,14 @@ def _load_model(checkpoint_path: str) -> nn.Module:
 
     if _loaded_model is not None and _loaded_checkpoint_path == checkpoint_path:
         return _loaded_model  # cached
+
+    try:
+        import torch
+    except ImportError as exc:
+        raise ModelNotTrainedError(
+            "torch is not installed in this environment. "
+            "Install the full requirements.txt to enable disease detection."
+        ) from exc
 
     model = build_architecture(pretrained=False)  # weights overwritten by checkpoint below
     state_dict = torch.load(checkpoint_path, map_location="cpu")
@@ -168,9 +182,25 @@ def _parse_class_name(class_name: str) -> tuple[str, str, bool]:
 def predict(image: Image.Image, checkpoint_path: str | None = None) -> DiseasePrediction:
     """
     Run real inference on a PIL image. Raises ModelNotTrainedError if
-    no checkpoint exists — this is the expected, correct behavior
-    until training has actually been run, not a bug to work around.
+    no checkpoint exists or torch is not installed — this is the
+    expected, correct behavior until training has actually been run,
+    not a bug to work around.
     """
+    try:
+        import torch
+        from torchvision import transforms
+    except ImportError as exc:
+        raise ModelNotTrainedError(
+            "torch / torchvision are not installed in this environment. "
+            "Install the full requirements.txt to enable disease detection."
+        ) from exc
+
+    _inference_transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=_IMAGENET_MEAN, std=_IMAGENET_STD),
+    ])
+
     checkpoint_path = checkpoint_path or DEFAULT_CHECKPOINT_PATH
     model = _load_model(checkpoint_path)
 

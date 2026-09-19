@@ -1,7 +1,8 @@
 """
 main.py
 
-Savitri backend — vertical slice #1: irrigation advisory.
+Savitri backend — vertical slice #1: irrigation advisory, plus
+spoilage-risk, market (sell-vs-store), and agrivoltaics endpoints.
 
     POST /api/v1/irrigation-advisory
 
@@ -20,6 +21,7 @@ from datetime import date
 
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from PIL import Image
@@ -28,19 +30,22 @@ import io
 from app.schemas import IrrigationRequest
 from app.schemas_farm import FarmCreate, FarmOut, IrrigationLogOut
 from app.services.irrigation_service import get_irrigation_recommendation
-from app.services.weather_service import WeatherServiceError
+from app.services.weather_service import fetch_daily_weather, WeatherServiceError
 from app.services.crop_coefficients import CROP_COEFFICIENTS
 from app.services.disease_detection import predict as predict_disease, ModelNotTrainedError
 from app.services.cold_storage_service import find_nearest, NoColdStorageDataError
 from app.services.mandi_price_service import fetch_mandi_prices, MandiPriceServiceError
 from app.services.bhashini_service import translate_text, text_to_speech, BhashiniServiceError
+from app.services.spoilage_service import calculate_spoilage_risk
+from app.services.market_service import get_market_advice
+from app.services.agrivoltaics_service import calculate_agrivoltaics_income
 from app.db import get_session
 from app.models_db import Farm, IrrigationLog
 
 app = FastAPI(
     title="Savitri Backend",
     description="Sustainable agriculture decision-support API for Indian farmers.",
-    version="0.2.0",
+    version="0.3.0",
 )
 
 app.add_middleware(
@@ -51,14 +56,15 @@ app.add_middleware(
 )
 
 
+class AgrivoltaicsRequest(BaseModel):
+    state: str
+    land_acres: float
+
+
 @app.on_event("startup")
 async def on_startup():
     # Schema is now managed by Alembic migrations, not create_all() —
     # run `alembic upgrade head` before starting the app (see README).
-    # This deliberately does NOT auto-create tables anymore: doing so
-    # silently would mean a schema change could reach a database with
-    # real farmer data in it without ever going through a reviewable
-    # migration.
     pass
 
 
@@ -67,7 +73,7 @@ async def root():
     return {
         "service": "savitri-backend",
         "status": "ok",
-        "slice": "irrigation-advisory-v1 + persistence",
+        "slice": "irrigation-advisory-v1 + persistence + spoilage/market/agrivoltaics",
     }
 
 
@@ -226,6 +232,90 @@ async def farm_history(farm_id: int, session: AsyncSession = Depends(get_session
     return result.scalars().all()
 
 
+@app.get("/api/v1/farms/{farm_id}/spoilage-risk")
+async def farm_spoilage_risk(
+    farm_id: int,
+    harvest_date: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Real spoilage-risk estimate: days since the given harvest date,
+    weighed against the farm's crop and today's actual forecast
+    temperature (from the same Open-Meteo pipeline irrigation uses).
+    See app/services/spoilage_service.py for the Q10 method and its
+    caveats.
+    """
+    farm = await session.get(Farm, farm_id)
+    if farm is None:
+        raise HTTPException(status_code=404, detail="Farm not found")
+
+    try:
+        harvest = date.fromisoformat(harvest_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="harvest_date must be YYYY-MM-DD")
+
+    days_since_harvest = (date.today() - harvest).days
+
+    try:
+        weather = await fetch_daily_weather(farm.lat, farm.lon)
+    except WeatherServiceError as e:
+        raise HTTPException(status_code=502, detail=f"Could not fetch real weather data. {e}")
+
+    forecast_avg_temp = (weather.t_max_c + weather.t_min_c) / 2
+
+    try:
+        result = calculate_spoilage_risk(farm.crop, days_since_harvest, forecast_avg_temp)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return result
+
+
+@app.get("/api/v1/farms/{farm_id}/market-advice")
+async def farm_market_advice(
+    farm_id: int,
+    state: str,
+    district: str | None = None,
+    market: str | None = None,
+    storage_days: int = 3,
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Real sell-now-vs-store economics for the farm's crop, using live
+    Agmarknet price history via data.gov.in. Requires DATA_GOV_API_KEY.
+    See app/services/market_service.py for the trend method and the
+    labelled cost assumptions used.
+    """
+    farm = await session.get(Farm, farm_id)
+    if farm is None:
+        raise HTTPException(status_code=404, detail="Farm not found")
+
+    try:
+        result = await get_market_advice(
+            state=state, commodity=farm.crop, storage_days=storage_days,
+            district=district, market=market,
+        )
+    except MandiPriceServiceError as e:
+        raise HTTPException(status_code=503, detail=f"Could not fetch real mandi price data. {e}")
+
+    return result
+
+
+@app.post("/api/v1/agrivoltaics-estimate")
+async def agrivoltaics_estimate(payload: AgrivoltaicsRequest):
+    """
+    Real, cited state-tariff arithmetic for the agrivoltaics "second
+    income" calculator. Only states with a real sourced rate are
+    supported — see app/services/agrivoltaics_service.py.
+    """
+    try:
+        result = calculate_agrivoltaics_income(payload.state, payload.land_acres)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return result
+
+
 @app.get("/api/v1/cold-storage/nearest")
 async def nearest_cold_storage(
     lat: float,
@@ -301,9 +391,7 @@ async def farm_irrigation_advisory_vernacular(
 
     Returns 503 if Bhashini credentials are missing/unreachable, or if
     Bhashini has no translation service for this specific language —
-    in either case we do NOT fall back to English silently, since a
-    farmer expecting Hindi getting English without explanation is a
-    real usability failure, not a graceful degradation.
+    in either case we do NOT fall back to English silently.
     """
     farm = await session.get(Farm, farm_id)
     if farm is None:
