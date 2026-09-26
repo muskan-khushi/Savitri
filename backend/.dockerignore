@@ -1,0 +1,43 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Large datasets — never ship to image
+data/
+ml/data/
+**/plantVillage/
+**/_temp_extract/
+**/*.zip
+
+# ML checkpoints (volume-mounted at runtime instead)
+ml/checkpoints/*.pth
+ml/checkpoints/*.pt
+
+# Dev artifacts
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Local DB
+savitri_dev.db
+*.db-shm
+*.db-wal
+
+# IDE / OS
+.idea/
+.vscode/
+*.DS_Store
+Thumbs.db
+
+# Env files (secrets)
+.env
+.env.local
+
+# Logs
+*.log
+logs/
