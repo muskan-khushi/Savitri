@@ -43,6 +43,18 @@ REFERENCE_SHELF_LIFE_DAYS: dict[str, float] = {
     "cotton": 365.0,     # ginned fiber, not perishable in the produce sense
     "chickpea": 270.0,   # dried pulse
     "mustard": 270.0,    # dried seed
+    "tomato": 7.0,        # ripe tomato, highly perishable at ambient
+    "onion": 60.0,        # dry bulb onion, reasonably shelf-stable at ambient
+    "banana": 5.0,        # ripe banana, very perishable
+    "soybean": 270.0,     # dried soybean grain
+    "groundnut": 180.0,   # dried groundnut/peanut (shelled)
+    "turmeric": 180.0,    # dried turmeric rhizome
+    "ginger": 30.0,       # fresh ginger rhizome, ambient storage
+    "eggplant": 5.0,      # brinjal/eggplant, highly perishable at ambient
+    "okra": 3.0,          # ladies' finger, very perishable at ambient
+    "lentil": 365.0,      # dried lentil/dal, long shelf life
+    "mango": 5.0,         # ripe mango, highly perishable at ambient
+    "cucumber": 5.0,      # fresh cucumber, perishable at ambient
 }
 
 

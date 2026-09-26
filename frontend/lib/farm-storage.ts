@@ -1,26 +1,89 @@
 /**
  * farm-storage.ts
  *
- * There is no auth/session system yet, so "which farm is this?" is
- * tracked client-side via localStorage — good enough for a single-user
- * demo/MVP, not a substitute for real auth once multiple farmers use
- * the web app. Replace with a real session once that exists.
+ * Stores the farmer's active farm profile in localStorage.
+ * This is intentionally simple for MVP: one farm per browser.
+ * The farm ID links to the real backend DB record — if the farm
+ * is deleted from the backend, the next API call will 404 and
+ * the UI should clear localStorage (handled in each page's error state).
  */
 
-const KEY = "savitri:farmId";
+export interface StoredFarm {
+  id: number;
+  data: {
+    name: string | null;
+    lat: number;
+    lon: number;
+    crop: string;
+    sowing_date: string;
+    telegram_chat_id?: string | null;
+  };
+  savedAt: string; // ISO timestamp
+}
+
+const STORAGE_KEY = "savitri_farm";
+
+export function saveFarm(farm: {
+  id: number;
+  name: string | null;
+  lat: number;
+  lon: number;
+  crop: string;
+  sowing_date: string;
+  telegram_chat_id?: string | null;
+}): void {
+  const stored: StoredFarm = {
+    id: farm.id,
+    data: {
+      name: farm.name,
+      lat: farm.lat,
+      lon: farm.lon,
+      crop: farm.crop,
+      sowing_date: farm.sowing_date,
+      telegram_chat_id: farm.telegram_chat_id,
+    },
+    savedAt: new Date().toISOString(),
+  };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+  } catch {
+    // localStorage unavailable (SSR, private browsing quota exceeded)
+  }
+}
+
+export function loadFarm(): StoredFarm | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredFarm;
+    // Basic validation — if shape is wrong, clear and return null
+    if (typeof parsed.id !== "number" || !parsed.data?.crop) {
+      clearFarm();
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
 export function getStoredFarmId(): number | null {
-  if (typeof window === "undefined") return null;
-  const v = window.localStorage.getItem(KEY);
-  return v ? Number(v) : null;
+  return loadFarm()?.id ?? null;
 }
 
-export function setStoredFarmId(id: number) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, String(id));
+export function clearFarm(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
 }
 
-export function clearStoredFarmId() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(KEY);
+/**
+ * Call this when a 404 is received for the stored farm ID —
+ * it means the backend DB was cleared/reset. Clears localStorage
+ * so the user is prompted to re-register.
+ */
+export function handleFarmNotFound(): void {
+  clearFarm();
 }

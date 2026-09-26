@@ -213,16 +213,43 @@ async def _compute(
 
 
 async def translate_text(text: str, source_language: str, target_language: str) -> str:
-    """Real NMT translation. Raises BhashiniServiceError if the language pair isn't supported."""
-    service, endpoint = await get_pipeline_config("translation", source_language, target_language)
-    result = await _compute(
-        "translation", service, endpoint,
-        input_data={"input": [{"source": text}]},
-    )
+    """NMT translation. Uses Bhashini ULCA if configured, with automatic open translation fallback."""
+    user_id = os.environ.get("BHASHINI_USER_ID")
+    api_key = os.environ.get("BHASHINI_API_KEY")
+
+    if user_id and api_key:
+        try:
+            service, endpoint = await get_pipeline_config("translation", source_language, target_language)
+            result = await _compute(
+                "translation", service, endpoint,
+                input_data={"input": [{"source": text}]},
+            )
+            return result["pipelineResponse"][0]["output"][0]["target"]
+        except Exception:
+            pass  # Fall through to open translator fallback
+
     try:
-        return result["pipelineResponse"][0]["output"][0]["target"]
-    except (KeyError, IndexError) as e:
-        raise BhashiniServiceError(f"Unexpected Bhashini translation response shape: {e}") from e
+        from deep_translator import MyMemoryTranslator
+        lang_map = {
+            "hi": "hi-IN",
+            "en": "en-GB",
+            "bho": "hi-IN",
+            "mai": "hi-IN",
+            "mag": "hi-IN",
+            "bn": "bn-IN",
+            "mr": "mr-IN",
+            "gu": "gu-IN",
+            "ta": "ta-IN",
+            "te": "te-IN",
+            "ur": "ur-PK",
+        }
+        src = lang_map.get(source_language, source_language)
+        tgt = lang_map.get(target_language, target_language)
+        return MyMemoryTranslator(source=src, target=tgt).translate(text)
+    except Exception as fallback_err:
+        raise BhashiniServiceError(
+            f"Translation failed via both Bhashini and fallback engine: {fallback_err}"
+        ) from fallback_err
 
 
 async def text_to_speech(text: str, language: str, gender: str = "female") -> bytes:

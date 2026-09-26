@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: savitri-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      - DATABASE_URL=sqlite+aiosqlite:///./savitri_dev.db
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - DATA_GOV_API_KEY=${DATA_GOV_API_KEY:-}
+      - BHASHINI_USER_ID=${BHASHINI_USER_ID:-}
+      - BHASHINI_API_KEY=${BHASHINI_API_KEY:-}
+    volumes:
+      - ./backend/savitri_dev.db:/app/savitri_dev.db
+      - ./backend/ml/checkpoints:/app/ml/checkpoints
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: savitri-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped

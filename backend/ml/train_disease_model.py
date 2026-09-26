@@ -71,13 +71,18 @@ def build_dataloaders(data_dir: str, batch_size: int, val_split: float, num_work
         transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
     ])
 
-    full_dataset = datasets.ImageFolder(data_dir, transform=train_transform)
+    # Load the dataset TWICE with different transforms, then split using the SAME indices.
+    # This is the correct fix for the "val_ds.dataset.transform" bug: random_split
+    # returns a Subset that shares the underlying dataset object, so mutating its
+    # .transform after splitting would affect the training subset too.
+    full_train_ds = datasets.ImageFolder(data_dir, transform=train_transform)
+    full_eval_ds = datasets.ImageFolder(data_dir, transform=eval_transform)
 
-    if full_dataset.classes != PLANTVILLAGE_CLASSES:
+    if full_train_ds.classes != PLANTVILLAGE_CLASSES:
         print(
             "WARNING: dataset folder class names/order don't exactly match "
             "PLANTVILLAGE_CLASSES in app/services/disease_detection.py.\n"
-            f"  Found in data-dir:  {full_dataset.classes[:3]}... ({len(full_dataset.classes)} classes)\n"
+            f"  Found in data-dir:  {full_train_ds.classes[:3]}... ({len(full_train_ds.classes)} classes)\n"
             f"  Expected:           {PLANTVILLAGE_CLASSES[:3]}... ({NUM_CLASSES} classes)\n"
             "Training will proceed using the dataset's own class order, but you "
             "MUST update PLANTVILLAGE_CLASSES to match before deploying this "
@@ -85,17 +90,25 @@ def build_dataloaders(data_dir: str, batch_size: int, val_split: float, num_work
             file=sys.stderr,
         )
 
-    val_size = int(len(full_dataset) * val_split)
-    train_size = len(full_dataset) - val_size
-    train_ds, val_ds = random_split(
-        full_dataset, [train_size, val_size], generator=torch.Generator().manual_seed(42)
-    )
-    # validation set should use the non-augmented transform
-    val_ds.dataset.transform = eval_transform
+    total = len(full_train_ds)
+    val_size = int(total * val_split)
+    train_size = total - val_size
 
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-    return train_loader, val_loader, full_dataset.classes
+    # Use the same generator seed to produce the SAME index split for both datasets.
+    gen = torch.Generator()
+    gen.manual_seed(42)
+    train_indices, val_indices = [
+        idx.tolist()
+        for idx in torch.randperm(total, generator=gen).split([train_size, val_size])
+    ]
+
+    train_ds = torch.utils.data.Subset(full_train_ds, train_indices)
+    val_ds = torch.utils.data.Subset(full_eval_ds, val_indices)
+
+    use_pin = torch.cuda.is_available()
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=use_pin)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=use_pin)
+    return train_loader, val_loader, full_train_ds.classes
 
 
 def train_one_epoch(model, loader, optimizer, criterion, device):
@@ -139,6 +152,7 @@ def main():
     parser.add_argument("--learning-rate", type=float, default=0.001)
     parser.add_argument("--val-split", type=float, default=0.15)
     parser.add_argument("--num-workers", type=int, default=4)
+    parser.add_argument("--label-smoothing", type=float, default=0.1, help="Label smoothing for CrossEntropyLoss (default: 0.1)")
     parser.add_argument("--output-dir", default=os.path.join(os.path.dirname(__file__), "checkpoints"))
     args = parser.parse_args()
 
@@ -152,8 +166,9 @@ def main():
     print(f"Train batches: {len(train_loader)}, Val batches: {len(val_loader)}, Classes: {len(classes)}")
 
     model = build_architecture(pretrained=True).to(device)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
     optimizer = torch.optim.SGD(model.parameters(), lr=args.learning_rate, momentum=0.9)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-6)
 
     best_val_loss = float("inf")
     best_path = os.path.join(args.output_dir, "mobilenetv2_plantvillage_best.pth")
@@ -164,8 +179,11 @@ def main():
         val_loss, val_acc = evaluate(model, val_loader, criterion, device)
         elapsed = time.time() - t0
 
+        scheduler.step()
+        current_lr = scheduler.get_last_lr()[0]
+
         print(
-            f"Epoch {epoch}/{args.epochs} ({elapsed:.1f}s) | "
+            f"Epoch {epoch}/{args.epochs} ({elapsed:.1f}s) | lr={current_lr:.2e} | "
             f"train_loss={train_loss:.4f} train_acc={train_acc:.4f} | "
             f"val_loss={val_loss:.4f} val_acc={val_acc:.4f}"
         )

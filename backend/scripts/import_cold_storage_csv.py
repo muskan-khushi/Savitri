@@ -7,7 +7,12 @@ interpolate any facility data — it only loads what's actually in the
 CSV you give it.
 
 Expected CSV columns (header row required):
-    name,lat,lon,capacity_tons,district,source
+    name,lat,lon,capacity_tons,district,state,source
+
+A pre-curated starter dataset (50 real facilities across 15 states) is
+provided at backend/data/cold_storage_india.csv — import it first:
+
+    python3 scripts/import_cold_storage_csv.py --csv data/cold_storage_india.csv
 
     - name: facility name (required)
     - lat, lon: decimal degrees (required)
@@ -80,6 +85,7 @@ async def import_csv(csv_path: str, dry_run: bool = False) -> int:
                 name=name, lat=lat, lon=lon,
                 capacity_tons=capacity_val,
                 district=row.get("district", "").strip() or None,
+                state=row.get("state", "").strip() or None,
                 source=row.get("source", "").strip() or None,
             ))
 

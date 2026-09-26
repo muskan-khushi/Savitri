@@ -38,6 +38,9 @@ import httpx
 RESOURCE_ID = "9ef84268-d588-465a-a308-a864a43d0070"
 API_URL = f"https://api.data.gov.in/resource/{RESOURCE_ID}"
 
+CACHE_TTL_HOURS = 12
+_PRICE_CACHE: dict[tuple, tuple[datetime, list[MandiPriceRecord]]] = {}
+
 
 class MandiPriceServiceError(RuntimeError):
     pass
@@ -142,12 +145,22 @@ async def fetch_mandi_prices(
     if grade:
         params["filters[grade]"] = grade
 
+    cache_key = (state, commodity, district, market, variety, grade, limit)
+    now = datetime.utcnow()
+
+    if cache_key in _PRICE_CACHE:
+        cached_time, cached_records = _PRICE_CACHE[cache_key]
+        if (now - cached_time).total_seconds() < CACHE_TTL_HOURS * 3600:
+            return cached_records
+
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=45.0) as client:
             resp = await client.get(API_URL, params=params)
             resp.raise_for_status()
             payload = resp.json()
-    except httpx.HTTPError as e:
+    except Exception as e:
+        if cache_key in _PRICE_CACHE:
+            return _PRICE_CACHE[cache_key][1]
         raise MandiPriceServiceError(f"data.gov.in Agmarknet request failed: {e}") from e
 
     records = []
@@ -171,5 +184,8 @@ async def fetch_mandi_prices(
             modal_price_per_quintal=modal_p,
             quality_flags=_quality_check(min_p, max_p, modal_p),
         ))
+
+    if records:
+        _PRICE_CACHE[cache_key] = (now, records)
 
     return records

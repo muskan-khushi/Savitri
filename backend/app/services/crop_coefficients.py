@@ -19,6 +19,8 @@ Growth stage durations (days) are approximate FAO-56 Table 11 figures
 for the crop grown under typical conditions; a production system should
 let farmers input actual sowing date and adjust from there rather than
 assuming fixed calendars.
+
+FAO-56 Table 11/12 values extended for Bihar/India context crops (tomato, onion, banana, soybean, groundnut, turmeric, ginger, eggplant, okra, lentil, mango, cucumber). Sources: FAO-56 (Allen et al., 1998) Tables 11 and 12.
 """
 
 from dataclasses import dataclass
@@ -62,6 +64,42 @@ CROP_COEFFICIENTS: dict[str, CropCoefficient] = {
     "mustard": CropCoefficient("mustard", kc_ini=0.35, kc_mid=1.15, kc_end=0.35,
                                 stage_days_ini=20, stage_days_dev=30,
                                 stage_days_mid=40, stage_days_late=25),
+    "tomato": CropCoefficient("tomato", kc_ini=0.60, kc_mid=1.15, kc_end=0.80,
+                               stage_days_ini=30, stage_days_dev=40,
+                               stage_days_mid=45, stage_days_late=25),
+    "onion": CropCoefficient("onion", kc_ini=0.50, kc_mid=1.00, kc_end=0.75,
+                             stage_days_ini=15, stage_days_dev=25,
+                             stage_days_mid=70, stage_days_late=40),
+    "banana": CropCoefficient("banana", kc_ini=0.50, kc_mid=1.10, kc_end=1.00,
+                              stage_days_ini=120, stage_days_dev=60,
+                              stage_days_mid=180, stage_days_late=5),
+    "soybean": CropCoefficient("soybean", kc_ini=0.40, kc_mid=1.15, kc_end=0.50,
+                                stage_days_ini=20, stage_days_dev=35,
+                                stage_days_mid=75, stage_days_late=30),
+    "groundnut": CropCoefficient("groundnut", kc_ini=0.40, kc_mid=1.15, kc_end=0.60,
+                                  stage_days_ini=25, stage_days_dev=35,
+                                  stage_days_mid=45, stage_days_late=25),
+    "turmeric": CropCoefficient("turmeric", kc_ini=0.40, kc_mid=1.00, kc_end=0.70,
+                                 stage_days_ini=60, stage_days_dev=60,
+                                 stage_days_mid=120, stage_days_late=60),
+    "ginger": CropCoefficient("ginger", kc_ini=0.50, kc_mid=1.00, kc_end=0.70,
+                              stage_days_ini=45, stage_days_dev=75,
+                              stage_days_mid=105, stage_days_late=75),
+    "eggplant": CropCoefficient("eggplant", kc_ini=0.60, kc_mid=1.05, kc_end=0.90,
+                                 stage_days_ini=30, stage_days_dev=40,
+                                 stage_days_mid=40, stage_days_late=20),
+    "okra": CropCoefficient("okra", kc_ini=0.50, kc_mid=1.05, kc_end=0.90,
+                            stage_days_ini=20, stage_days_dev=30,
+                            stage_days_mid=40, stage_days_late=20),
+    "lentil": CropCoefficient("lentil", kc_ini=0.40, kc_mid=1.10, kc_end=0.50,
+                              stage_days_ini=20, stage_days_dev=30,
+                              stage_days_mid=60, stage_days_late=40),
+    "mango": CropCoefficient("mango", kc_ini=0.50, kc_mid=1.00, kc_end=0.85,
+                             stage_days_ini=90, stage_days_dev=90,
+                             stage_days_mid=90, stage_days_late=30),
+    "cucumber": CropCoefficient("cucumber", kc_ini=0.60, kc_mid=1.00, kc_end=0.75,
+                                 stage_days_ini=20, stage_days_dev=30,
+                                 stage_days_mid=40, stage_days_late=15),
 }
 
 

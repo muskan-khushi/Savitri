@@ -196,7 +196,7 @@ export default function DashboardHome() {
       </div>
 
       {/* Secondary links */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {[
           {
             href: "/dashboard/cold-storage",
@@ -214,6 +214,8 @@ export default function DashboardHome() {
             icon: "☀️",
           },
           { href: "/dashboard/climate", label: "Climate", icon: "🌤" },
+          { href: "/dashboard/impact", label: "Water & Impact", icon: "💧" },
+          { href: "/allocation", label: "FPO Allocation", icon: "🏢" },
         ].map((item) => (
           <Link
             key={item.href}

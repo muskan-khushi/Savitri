@@ -20,6 +20,7 @@ Two tables for this slice:
 """
 
 from datetime import date, datetime
+from typing import Optional
 
 from sqlalchemy import String, Float, Integer, Boolean, Date, DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -97,6 +98,51 @@ class ColdStorage(Base):
     lon: Mapped[float] = mapped_column(Float)
     capacity_tons: Mapped[float] = mapped_column(Float, nullable=True)
     district: Mapped[str] = mapped_column(String, nullable=True)
+    state: Mapped[str] = mapped_column(String, nullable=True)
     source: Mapped[str] = mapped_column(String, nullable=True)  # where this record came from
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class ColdStorageBooking(Base):
+    """
+    Records a confirmed cold-storage slot booking. capacity is checked
+    against the sum of overlapping confirmed bookings (see
+    cold_storage_booking_service.py). Cancelled bookings are kept for
+    audit history — never deleted.
+    """
+    __tablename__ = "cold_storage_bookings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    facility_id: Mapped[int] = mapped_column(ForeignKey("cold_storages.id"), index=True)
+    farm_id: Mapped[int] = mapped_column(ForeignKey("farms.id"), index=True)
+
+    quantity_tons: Mapped[float] = mapped_column(Float)
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String, default="confirmed")  # 'confirmed' | 'cancelled'
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class DiseaseDetectionLog(Base):
+    """
+    Persists every real disease detection inference result. Used by
+    outbreak_warning_service.py to aggregate regional disease signals.
+    Only non-fabricated predictions (from a real trained checkpoint) are
+    logged — the ModelNotTrainedError path never reaches this table.
+    """
+    __tablename__ = "disease_detection_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    farm_id: Mapped[Optional[int]] = mapped_column(ForeignKey("farms.id"), nullable=True, index=True)
+
+    lat: Mapped[float] = mapped_column(Float)
+    lon: Mapped[float] = mapped_column(Float)
+    crop: Mapped[str] = mapped_column(String)
+    condition: Mapped[str] = mapped_column(String)
+    is_healthy: Mapped[bool] = mapped_column(Boolean)
+    confidence: Mapped[float] = mapped_column(Float)
+    detection_date: Mapped[date] = mapped_column(Date, index=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

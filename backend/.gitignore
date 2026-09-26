@@ -1,0 +1,57 @@
+# ML Datasets & Checkpoints
+data/
+data/**
+**/data/
+**/data/**
+!data/cold_storage_india.csv
+ml/data/
+ml/data/**
+data/plantVillage/
+data/plantVillage/**
+data/PlantVillage/
+data/PlantVillage/**
+**/plantVillage/
+**/plantVillage/**
+**/PlantVillage/
+**/PlantVillage/**
+**/plantvillage/
+**/plantvillage/**
+**/plant_village/
+**/plant_village/**
+plant_village.zip
+**/plant_village.zip
+_temp_extract/
+**/_temp_extract/
+**/_temp_extract/**
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# Checkpoints
+*.pth
+*.pt
+*.bin
+*.onnx
+*.h5
+*.ckpt
+ml/checkpoints/*.pth
+!.gitkeep
+
+# Environment & Databases
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+savitri_dev.db
+
+# Virtual Env & Python
+venv/
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+logs/
+*.log

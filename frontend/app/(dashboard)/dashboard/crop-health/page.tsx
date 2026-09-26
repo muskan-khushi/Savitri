@@ -10,6 +10,7 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { detectDisease, ApiError, type DiseasePrediction } from "@/lib/api";
+import { loadFarm } from "@/lib/farm-storage";
 
 type State =
   | { status: "idle" }
@@ -38,7 +39,11 @@ export default function CropHealthPage() {
     setState({ status: "uploading" });
 
     try {
-      const result = await detectDisease(file);
+      const stored = loadFarm();
+      const loc = stored
+        ? { lat: stored.data.lat, lon: stored.data.lon, farmId: stored.id }
+        : undefined;
+      const result = await detectDisease(file, loc);
       setState({ status: "success", result, fileName: file.name });
     } catch (err) {
       if (err instanceof ApiError && err.status === 503) {
