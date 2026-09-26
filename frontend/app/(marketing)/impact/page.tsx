@@ -1,4 +1,3 @@
-import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 
 /**
@@ -28,7 +27,6 @@ const STATS = [
 export default function ImpactPage() {
   return (
     <>
-      <SiteHeader />
       <main className="font-body">
         <section className="mx-auto max-w-2xl px-6 pb-8 pt-20">
           <h1 className="font-body text-3xl font-semibold text-soil md:text-4xl">

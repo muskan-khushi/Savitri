@@ -1,4 +1,3 @@
-import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Button } from "@/components/ui/button";
 
@@ -11,7 +10,6 @@ import { Button } from "@/components/ui/button";
 export default function ContactPage() {
   return (
     <>
-      <SiteHeader />
       <main>
         <section className="mx-auto max-w-lg px-6 py-20">
           <h1 className="font-display text-3xl text-soil md:text-4xl">

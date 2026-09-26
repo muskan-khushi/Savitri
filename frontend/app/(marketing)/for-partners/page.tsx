@@ -1,4 +1,3 @@
-import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -26,7 +25,6 @@ const MODELS = [
 export default function ForPartnersPage() {
   return (
     <>
-      <SiteHeader />
       <main>
         <section className="mx-auto max-w-3xl px-6 pb-8 pt-20 text-center">
           <h1 className="font-display text-4xl text-soil md:text-5xl">

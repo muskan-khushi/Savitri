@@ -1,5 +1,4 @@
 import { MythSequence } from "@/components/savitri/myth-sequence";
-import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { artExists, ART_FILES } from "@/lib/art";
 
@@ -18,8 +17,6 @@ export default function StoryPage() {
 
   return (
     <>
-      <SiteHeader />
-
       <main>
         <MythSequence artStatus={artStatus} />
 

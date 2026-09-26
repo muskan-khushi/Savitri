@@ -1,4 +1,3 @@
-import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { ChatMockup } from "@/components/phone-preview/ChatMockup";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,6 @@ import Link from "next/link";
 export default function ForFarmersPage() {
   return (
     <>
-      <SiteHeader />
       <main>
         <section className="mx-auto grid max-w-5xl gap-12 px-6 py-20 md:grid-cols-2 md:items-center">
           <div>
