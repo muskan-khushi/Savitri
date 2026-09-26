@@ -69,7 +69,7 @@ export default function ImpactPage() {
         </div>
         <Button
           onClick={() => window.print()}
-          variant="outline"
+          variant="secondary"
           className="border-soil/20 text-soil text-xs"
         >
           📄 Export Grant Brief

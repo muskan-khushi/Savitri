@@ -58,9 +58,9 @@ export default function AllocationPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center rounded-full bg-leaf/20 px-3 py-1 text-xs font-semibold text-leaf">
+          {/* <span className="inline-flex items-center rounded-full bg-leaf/20 px-3 py-1 text-xs font-semibold text-leaf">
             🟢 Network Live (50 Hubs)
-          </span>
+          </span> */}
         </div>
       </div>
 

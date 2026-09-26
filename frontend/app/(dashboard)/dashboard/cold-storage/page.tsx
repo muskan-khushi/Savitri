@@ -161,11 +161,11 @@ export default function ColdStoragePage() {
                 </span>
                 <p className="font-medium text-soil">{f.name}</p>
               </div>
-              {f.address && (
-                <p className="text-xs text-soil/50 mt-0.5">{f.address}</p>
+              {f.district && (
+                <p className="text-xs text-soil/50 mt-0.5">{f.district}</p>
               )}
               <p className="text-xs text-soil/50 mt-0.5">
-                Capacity: {f.capacity_mt} MT
+                Capacity: {f.capacity_tons ?? "N/A"} MT
               </p>
             </div>
             <div className="text-right shrink-0 ml-4">

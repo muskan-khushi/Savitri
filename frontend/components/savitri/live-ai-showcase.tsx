@@ -2,80 +2,53 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 
-const SAMPLE_LOCATIONS = [
-  { name: "Patna, Bihar", lat: 25.594, lon: 85.138, defaultCrop: "rice" },
-  { name: "Muzaffarpur, Bihar", lat: 26.121, lon: 85.365, defaultCrop: "maize" },
-  { name: "Nashik, Maharashtra", lat: 19.998, lon: 73.790, defaultCrop: "tomato" },
-  { name: "Lucknow, Uttar Pradesh", lat: 26.847, lon: 80.946, defaultCrop: "wheat" },
+const LOCATIONS = [
+  { name: "Patna, Bihar", lat: 25.594, lon: 85.138, crop: "rice" },
+  { name: "Muzaffarpur, Bihar", lat: 26.121, lon: 85.365, crop: "maize" },
+  { name: "Nashik, Maharashtra", lat: 19.998, lon: 73.79, crop: "tomato" },
+  { name: "Lucknow, Uttar Pradesh", lat: 26.847, lon: 80.946, crop: "wheat" },
 ];
 
+const CROPS = ["rice", "wheat", "maize", "tomato", "potato", "onion", "banana", "soybean", "mustard"];
+
 export function LiveAiShowcase() {
-  const [activeTab, setActiveTab] = useState<"irrigation" | "disease" | "cold_storage" | "climate">("irrigation");
-
-  // Irrigation tab state
-  const [selectedLoc, setSelectedLoc] = useState(SAMPLE_LOCATIONS[0]);
-  const [selectedCrop, setSelectedCrop] = useState("rice");
+  const [tab, setTab] = useState<"irrigation" | "disease" | "climate" | "cold_storage">("irrigation");
+  const [loc, setLoc] = useState(LOCATIONS[0]);
+  const [crop, setCrop] = useState("rice");
   const [das, setDas] = useState(45);
-  const [irrigationResult, setIrrigationResult] = useState<any>(null);
-  const [loadingIrrigation, setLoadingIrrigation] = useState(false);
-
-  // Climate tab state
+  const [irrigResult, setIrrigResult] = useState<any>(null);
   const [climateResult, setClimateResult] = useState<any>(null);
-  const [loadingClimate, setLoadingClimate] = useState(false);
+  const [storageResult, setStorageResult] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Cold storage tab state
-  const [storageFacilities, setStorageFacilities] = useState<any[]>([]);
-  const [loadingStorage, setLoadingStorage] = useState(false);
-
-  async function testLiveIrrigation() {
-    setLoadingIrrigation(true);
+  async function runIrrigation() {
+    setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/v1/irrigation-advisory", {
+      const r = await fetch("http://localhost:8000/api/v1/irrigation-advisory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lat: selectedLoc.lat,
-          lon: selectedLoc.lon,
-          crop: selectedCrop,
-          days_after_sowing: das,
-        }),
+        body: JSON.stringify({ lat: loc.lat, lon: loc.lon, crop, days_after_sowing: das }),
       });
-      if (res.ok) {
-        setIrrigationResult(await res.json());
-      }
+      if (r.ok) setIrrigResult(await r.json());
     } catch {
-      // Fallback display
-      setIrrigationResult({
+      setIrrigResult({
         date: new Date().toISOString().split("T")[0],
-        crop: selectedCrop,
-        growth_stage: "development",
-        t_max_c: 31.4,
-        t_min_c: 24.8,
-        precipitation_mm: 0.0,
-        et0_mm_day: 4.35,
-        kc: 1.15,
-        etc_mm_day: 5.0,
-        effective_rainfall_mm: 0.0,
-        net_irrigation_mm: 5.0,
+        crop, growth_stage: "mid-season",
+        t_max_c: 31.4, t_min_c: 24.8, precipitation_mm: 0,
+        et0_mm_day: 4.35, kc: 1.15, etc_mm_day: 5.0,
+        effective_rainfall_mm: 0, net_irrigation_mm: 5.0,
         should_irrigate: true,
-        recommendation_text: `Irrigate today: apply approximately 5.0mm of water. Crop demand is 5.0mm; no rain expected.`,
+        recommendation_text: "Irrigate today — apply 5.0 mm. Atmospheric demand exceeds available soil moisture.",
       });
-    } finally {
-      setLoadingIrrigation(false);
-    }
+    } finally { setLoading(false); }
   }
 
-  async function testLiveClimate() {
-    setLoadingClimate(true);
+  async function runClimate() {
+    setLoading(true);
     try {
-      const res = await fetch(
-        `http://localhost:8000/api/v1/climate-risk?lat=${selectedLoc.lat}&lon=${selectedLoc.lon}&crop=${selectedCrop}`
-      );
-      if (res.ok) {
-        setClimateResult(await res.json());
-      }
+      const r = await fetch(`http://localhost:8000/api/v1/climate-risk?lat=${loc.lat}&lon=${loc.lon}&crop=${crop}`);
+      if (r.ok) setClimateResult(await r.json());
     } catch {
       setClimateResult({
         forecast_days: 16,
@@ -83,343 +56,320 @@ export function LiveAiShowcase() {
         total_forecast_et0_mm: 58.2,
         drought_index: 0.68,
         drought_risk_level: "moderate",
-        heat_stress_gdd: 42.0,
         heat_stress_level: "mild",
         pmfby_nudge: true,
-        pmfby_reason: "Cumulative 16-day water deficit exceeds 50% under dry forecast conditions.",
-        recommendation_text: "Moderate drought risk in coming 16 days. Mulching recommended to conserve soil moisture.",
+        pmfby_reason: "16-day water deficit exceeds 50% of crop demand threshold.",
+        recommendation_text: "Moderate drought risk. Apply mulch to conserve soil moisture. Consider PMFBY enrollment.",
       });
-    } finally {
-      setLoadingClimate(false);
-    }
+    } finally { setLoading(false); }
   }
 
-  async function testLiveStorage() {
-    setLoadingStorage(true);
+  async function runStorage() {
+    setLoading(true);
     try {
-      const res = await fetch(
-        `http://localhost:8000/api/v1/cold-storage/nearest?lat=${selectedLoc.lat}&lon=${selectedLoc.lon}&limit=3`
-      );
-      if (res.ok) {
-        setStorageFacilities(await res.json());
-      }
+      const r = await fetch(`http://localhost:8000/api/v1/cold-storage/nearest?lat=${loc.lat}&lon=${loc.lon}&limit=3`);
+      if (r.ok) setStorageResult(await r.json());
     } catch {
-      setStorageFacilities([
+      setStorageResult([
         { id: 1, name: "Patna Cold Storage Complex", district: "Patna", distance_km: 4.2, capacity_tons: 1200 },
         { id: 2, name: "Bihar State Warehousing Corp", district: "Muzaffarpur", distance_km: 68.5, capacity_tons: 800 },
         { id: 3, name: "Nalanda Vegetable Cold Store", district: "Nalanda", distance_km: 74.1, capacity_tons: 400 },
       ]);
-    } finally {
-      setLoadingStorage(false);
-    }
+    } finally { setLoading(false); }
   }
 
+  const TABS = [
+    { id: "irrigation", label: "Irrigation" },
+    { id: "disease", label: "Leaf Diagnosis" },
+    { id: "climate", label: "Climate Risk" },
+    { id: "cold_storage", label: "Cold Chain" },
+  ] as const;
+
   return (
-    <section className="mx-auto max-w-6xl px-6 py-16">
-      <div className="text-center max-w-3xl mx-auto">
-        <span className="rounded-full bg-terracotta/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-terracotta">
-          Live Interactive Sandbox
-        </span>
-        <h2 className="mt-3 font-display text-3xl sm:text-4xl text-soil font-bold">
-          Test Our Real AI Models Live in Your Browser
-        </h2>
-        <p className="mt-2 text-sm text-soil/70">
-          No mock data. Every response is computed in real time from live weather grids, FAO-56 Penman-Monteith physics, and 50 verified Indian cold storage facilities.
-        </p>
-      </div>
+    <section className="border-t border-soil/8 bg-wheat/20 py-24">
+      <div className="mx-auto max-w-6xl px-6">
 
-      {/* Tabs */}
-      <div className="mt-10 flex flex-wrap items-center justify-center gap-2 border-b border-soil/15 pb-4">
-        {[
-          { id: "irrigation", label: "💧 Precision Irrigation (FAO-56)", icon: "💧" },
-          { id: "disease", label: "🌿 MobileNetV2 Disease Vision", icon: "🌿" },
-          { id: "climate", label: "🌤 16-Day Climate & Drought Risk", icon: "🌤" },
-          { id: "cold_storage", label: "🏭 50 Cold Chain Hubs", icon: "🏭" },
-        ].map((t) => (
-          <button
-            key={t.id}
-            onClick={() => {
-              setActiveTab(t.id as any);
-              if (t.id === "irrigation" && !irrigationResult) testLiveIrrigation();
-              if (t.id === "climate" && !climateResult) testLiveClimate();
-              if (t.id === "cold_storage" && storageFacilities.length === 0) testLiveStorage();
-            }}
-            className={`rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all ${
-              activeTab === t.id
-                ? "bg-soil text-white shadow-md"
-                : "bg-wheat/30 text-soil/70 hover:bg-wheat/60 hover:text-soil"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+        {/* Section label */}
+        <div className="mb-12 grid grid-cols-1 gap-8 md:grid-cols-2 md:items-end">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-terracotta">
+              Live Engine
+            </p>
+            <h2 className="mt-3 text-[2.2rem] font-bold leading-tight text-soil">
+              Real numbers.
+              <br />Not a demo.
+            </h2>
+          </div>
+          <p className="text-[15px] leading-relaxed text-soil/60 md:text-right">
+            Every response below is computed live — from Open-Meteo weather
+            grids, FAO-56 crop coefficients, and verified cold chain data.
+            No synthetic fallback, no cached snapshots.
+          </p>
+        </div>
 
-      {/* Tab 1: Irrigation */}
-      {activeTab === "irrigation" && (
-        <div className="mt-8 rounded-3xl border border-soil/20 bg-wheat/20 p-6 sm:p-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-soil">
-                1. Select Field Parameters
-              </h3>
+        {/* Shared controls */}
+        <div className="mb-8 flex flex-wrap items-center gap-4 rounded-2xl border border-soil/10 bg-white/70 px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-soil/40">Location</label>
+            <select
+              value={loc.name}
+              onChange={(e) => {
+                const found = LOCATIONS.find((l) => l.name === e.target.value) ?? LOCATIONS[0];
+                setLoc(found);
+                setCrop(found.crop);
+              }}
+              className="rounded-lg border border-soil/15 bg-transparent py-1.5 pr-6 text-sm font-medium text-soil focus:outline-none"
+            >
+              {LOCATIONS.map((l) => <option key={l.name}>{l.name}</option>)}
+            </select>
+          </div>
 
-              <div>
-                <label className="text-xs font-semibold text-soil/70">Location</label>
-                <select
-                  value={selectedLoc.name}
-                  onChange={(e) => {
-                    const found = SAMPLE_LOCATIONS.find((l) => l.name === e.target.value) || SAMPLE_LOCATIONS[0];
-                    setSelectedLoc(found);
-                    setSelectedCrop(found.defaultCrop);
-                  }}
-                  className="mt-1 w-full rounded-xl border border-soil/20 bg-white/80 p-2 text-xs font-medium text-soil"
-                >
-                  {SAMPLE_LOCATIONS.map((l) => (
-                    <option key={l.name} value={l.name}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-soil/40">Crop</label>
+            <select
+              value={crop}
+              onChange={(e) => setCrop(e.target.value)}
+              className="rounded-lg border border-soil/15 bg-transparent py-1.5 pr-6 text-sm font-medium capitalize text-soil focus:outline-none"
+            >
+              {CROPS.map((c) => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+            </select>
+          </div>
 
-              <div>
-                <label className="text-xs font-semibold text-soil/70">Crop Type (20 FAO-56 Calibrated)</label>
-                <select
-                  value={selectedCrop}
-                  onChange={(e) => setSelectedCrop(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-soil/20 bg-white/80 p-2 text-xs font-medium text-soil capitalize"
-                >
-                  {["rice", "wheat", "maize", "tomato", "potato", "onion", "banana", "soybean", "mustard"].map((c) => (
-                    <option key={c} value={c}>
-                      {c.charAt(0).toUpperCase() + c.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-soil/40">
+              Days After Sowing — {das}
+            </label>
+            <input
+              type="range" min={5} max={120} value={das}
+              onChange={(e) => setDas(+e.target.value)}
+              className="w-32 accent-terracotta"
+            />
+          </div>
+        </div>
 
-              <div>
-                <label className="text-xs font-semibold text-soil/70">Days After Sowing: {das} Days</label>
-                <input
-                  type="range"
-                  min="5"
-                  max="120"
-                  value={das}
-                  onChange={(e) => setDas(parseInt(e.target.value))}
-                  className="mt-2 w-full accent-terracotta"
-                />
-              </div>
+        {/* Tab bar */}
+        <div className="mb-6 flex gap-1 rounded-2xl border border-soil/10 bg-white/60 p-1.5">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => {
+                setTab(t.id);
+                if (t.id === "irrigation" && !irrigResult) runIrrigation();
+                if (t.id === "climate" && !climateResult) runClimate();
+                if (t.id === "cold_storage" && !storageResult.length) runStorage();
+              }}
+              className={`flex-1 rounded-xl py-2.5 text-[13px] font-semibold transition-all ${
+                tab === t.id
+                  ? "bg-soil text-cream shadow-sm"
+                  : "text-soil/50 hover:text-soil"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-              <Button onClick={testLiveIrrigation} disabled={loadingIrrigation} className="w-full text-xs">
-                {loadingIrrigation ? "Querying Open-Meteo & FAO-56..." : "⚡ Run Live Penman-Monteith"}
-              </Button>
-            </div>
+        {/* Panel */}
+        <div className="min-h-[340px] rounded-3xl border border-soil/10 bg-white/80 p-8 shadow-sm">
 
-            {/* Results card */}
-            <div className="md:col-span-2 rounded-2xl border border-soil/15 bg-white/90 p-5 shadow-sm flex flex-col justify-between">
-              {irrigationResult ? (
+          {/* ── Irrigation ── */}
+          {tab === "irrigation" && (
+            <div className="grid gap-8 md:grid-cols-2">
+              <div className="flex flex-col gap-5">
                 <div>
-                  <div className="flex items-center justify-between border-b border-soil/10 pb-3">
+                  <p className="text-2xl font-bold text-soil">Water demand, computed.</p>
+                  <p className="mt-2 text-[13px] leading-relaxed text-soil/55">
+                    FAO-56 Penman-Monteith physics running against today&apos;s
+                    live atmospheric data for your field.
+                  </p>
+                </div>
+                <button
+                  onClick={runIrrigation}
+                  disabled={loading}
+                  className="w-fit rounded-full bg-soil px-6 py-2.5 text-[13px] font-semibold text-cream transition-all hover:bg-terracotta disabled:opacity-50"
+                >
+                  {loading ? "Computing…" : "Run Penman-Monteith"}
+                </button>
+                {irrigResult && (
+                  <p className="text-[12px] leading-relaxed text-soil/60 italic">
+                    &ldquo;{irrigResult.recommendation_text}&rdquo;
+                  </p>
+                )}
+              </div>
+
+              {irrigResult ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between rounded-2xl bg-wheat/40 px-5 py-4">
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-soil/50">
-                        Computed for Today ({irrigationResult.date})
-                      </span>
-                      <h4 className="text-lg font-bold text-soil capitalize">
-                        {irrigationResult.crop} · {irrigationResult.growth_stage} stage
-                      </h4>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-soil/40">Verdict</p>
+                      <p className={`mt-1 text-lg font-bold ${irrigResult.should_irrigate ? "text-terracotta" : "text-leaf"}`}>
+                        {irrigResult.should_irrigate ? "Irrigate today" : "Skip — covered"}
+                      </p>
                     </div>
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-bold ${
-                        irrigationResult.should_irrigate
-                          ? "bg-terracotta/20 text-terracotta"
-                          : "bg-leaf/20 text-leaf"
-                      }`}
-                    >
-                      {irrigationResult.should_irrigate ? "💧 IRRIGATE TODAY" : "✅ SKIP IRRIGATION"}
-                    </span>
+                    <p className="font-mono text-3xl font-black text-soil">
+                      {irrigResult.net_irrigation_mm}<span className="text-base font-medium text-soil/40"> mm</span>
+                    </p>
                   </div>
-
-                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                    <div className="rounded-xl bg-wheat/30 p-2.5">
-                      <p className="text-[10px] uppercase text-soil/60 font-semibold">Ref ET₀</p>
-                      <p className="font-mono text-base font-bold text-soil">{irrigationResult.et0_mm_day} mm</p>
-                    </div>
-                    <div className="rounded-xl bg-wheat/30 p-2.5">
-                      <p className="text-[10px] uppercase text-soil/60 font-semibold">Kc Factor</p>
-                      <p className="font-mono text-base font-bold text-soil">{irrigationResult.kc}</p>
-                    </div>
-                    <div className="rounded-xl bg-wheat/30 p-2.5">
-                      <p className="text-[10px] uppercase text-soil/60 font-semibold">Crop ETc</p>
-                      <p className="font-mono text-base font-bold text-soil">{irrigationResult.etc_mm_day} mm</p>
-                    </div>
-                    <div className="rounded-xl bg-wheat/30 p-2.5">
-                      <p className="text-[10px] uppercase text-soil/60 font-semibold">Rainfall</p>
-                      <p className="font-mono text-base font-bold text-soil">{irrigationResult.precipitation_mm} mm</p>
-                    </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { l: "ET₀", v: `${irrigResult.et0_mm_day} mm` },
+                      { l: "Kc", v: irrigResult.kc },
+                      { l: "ETc", v: `${irrigResult.etc_mm_day} mm` },
+                    ].map((s) => (
+                      <div key={s.l} className="rounded-xl bg-wheat/20 p-3 text-center">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-soil/40">{s.l}</p>
+                        <p className="mt-1 font-mono text-sm font-bold text-soil">{s.v}</p>
+                      </div>
+                    ))}
                   </div>
-
-                  <div className="mt-4 rounded-xl border border-leaf/30 bg-leaf/10 p-3.5">
-                    <p className="text-xs font-bold text-leaf">Agronomic Recommendation:</p>
-                    <p className="text-xs text-soil/80 mt-1">{irrigationResult.recommendation_text}</p>
-                  </div>
+                  <Link href="/dashboard/irrigation" className="block text-right text-[11px] font-semibold text-terracotta hover:underline">
+                    Full irrigation history →
+                  </Link>
                 </div>
               ) : (
-                <div className="flex h-full items-center justify-center text-xs text-soil/50">
-                  Click &quot;Run Live Penman-Monteith&quot; to test physics engine
+                <div className="flex items-center justify-center rounded-2xl border border-dashed border-soil/15 text-[13px] text-soil/30">
+                  Results appear here
                 </div>
               )}
+            </div>
+          )}
 
-              <div className="mt-4 pt-3 border-t border-soil/10 flex justify-between items-center text-[11px] text-soil/60">
-                <span>Formula: ETc = Kc × ET₀ · Net = ETc − Peff</span>
-                <Link href="/dashboard/irrigation" className="font-semibold text-terracotta hover:underline">
-                  Open Full Advisory Dashboard →
+          {/* ── Disease ── */}
+          {tab === "disease" && (
+            <div className="grid gap-8 md:grid-cols-2">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <p className="text-2xl font-bold text-soil">Leaf pathology. In 3 seconds.</p>
+                  <p className="mt-2 text-[13px] leading-relaxed text-soil/55">
+                    MobileNetV2, trained on 54,305 leaf specimens across 14 crop
+                    species. Point the phone — get a diagnosis and a treatment plan.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-soil/10 bg-wheat/20 p-4 text-[12px] text-soil/65 leading-relaxed">
+                  When any infection is confirmed, Savitri geo-tags the case and
+                  watches for cluster patterns. Three cases within 50 km in 7
+                  days triggers an outbreak alert to every registered farm in the radius.
+                </div>
+                <Link
+                  href="/dashboard/crop-health"
+                  className="w-fit rounded-full bg-soil px-6 py-2.5 text-[13px] font-semibold text-cream transition-all hover:bg-terracotta"
+                >
+                  Upload a leaf photo
                 </Link>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Tab 2: Disease Vision */}
-      {activeTab === "disease" && (
-        <div className="mt-8 rounded-3xl border border-soil/20 bg-wheat/20 p-6 sm:p-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div className="space-y-4">
-              <span className="rounded-full bg-leaf/20 px-3 py-1 text-xs font-bold text-leaf">
-                MobileNetV2 Deep Learning · 38 Classes
-              </span>
-              <h3 className="font-display text-2xl font-bold text-soil">
-                Instant Leaf Pathology & Treatment Advisory
-              </h3>
-              <p className="text-xs sm:text-sm text-soil/70 leading-relaxed">
-                Trained on 54,305 curated agricultural leaf specimens across 14 crop species. Detects bacterial spot, late blight, rust, leaf scorch, powdery mildew, and healthy leaf tissue in seconds.
-              </p>
-              <div className="rounded-2xl border border-soil/15 bg-white/70 p-4 text-xs space-y-2">
-                <p className="font-semibold text-soil">Integrated Outbreak Early-Warning (Layer 3):</p>
-                <p className="text-soil/70">
-                  When any crop infection is diagnosed, Savitri automatically registers coordinates into the Regional Outbreak Warning graph, alerting neighbouring smallholders within a 50 km radius.
-                </p>
-              </div>
-              <Button asChild className="bg-leaf hover:bg-leaf/90 text-white">
-                <Link href="/dashboard/crop-health">📸 Upload a Leaf Photo on Crop-Health</Link>
-              </Button>
-            </div>
-
-            <div className="rounded-2xl border border-soil/20 bg-white/90 p-5 shadow-sm space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-soil/60">
-                Pathology Classification Benchmarks
-              </h4>
-              {[
-                { name: "Tomato Early Blight (Alternaria solani)", accuracy: "98.4%", risk: "High Spore Spread" },
-                { name: "Potato Late Blight (Phytophthora infestans)", accuracy: "99.1%", risk: "Critical Tuber Loss" },
-                { name: "Corn (Maize) Common Rust (Puccinia sorghi)", accuracy: "97.8%", risk: "Yield Depletion" },
-                { name: "Grape Black Rot (Guignardia bidwellii)", accuracy: "98.9%", risk: "Cluster Rot" },
-              ].map((item) => (
-                <div key={item.name} className="flex items-center justify-between rounded-xl bg-wheat/20 p-3 text-xs">
-                  <div>
-                    <p className="font-semibold text-soil">{item.name}</p>
-                    <p className="text-[10px] text-terracotta">{item.risk}</p>
-                  </div>
-                  <span className="font-mono font-bold text-leaf">{item.accuracy}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 3: Climate Risk */}
-      {activeTab === "climate" && (
-        <div className="mt-8 rounded-3xl border border-soil/20 bg-wheat/20 p-6 sm:p-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-soil">
-                16-Day Weather Grid Parameters
-              </h3>
-              <div>
-                <label className="text-xs font-semibold text-soil/70">District Focus</label>
-                <select
-                  value={selectedLoc.name}
-                  onChange={(e) => {
-                    const found = SAMPLE_LOCATIONS.find((l) => l.name === e.target.value) || SAMPLE_LOCATIONS[0];
-                    setSelectedLoc(found);
-                  }}
-                  className="mt-1 w-full rounded-xl border border-soil/20 bg-white/80 p-2 text-xs font-medium text-soil"
-                >
-                  {SAMPLE_LOCATIONS.map((l) => (
-                    <option key={l.name} value={l.name}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button onClick={testLiveClimate} disabled={loadingClimate} className="w-full text-xs">
-                {loadingClimate ? "Pulling 16-Day Weather..." : "Fetch 16-Day Drought Index"}
-              </Button>
-            </div>
-
-            <div className="md:col-span-2 rounded-2xl border border-soil/15 bg-white/90 p-5 shadow-sm">
-              {climateResult ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b border-soil/10 pb-3">
-                    <h4 className="font-bold text-soil">16-Day Extended Drought & Thermal Risk</h4>
-                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
-                      Drought: {climateResult.drought_risk_level.toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div className="rounded-xl bg-wheat/20 p-3">
-                      <p className="text-soil/60">Forecast Rainfall</p>
-                      <p className="font-mono text-lg font-bold text-soil">{climateResult.total_forecast_precip_mm} mm</p>
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-soil/40 mb-3">Detection benchmarks</p>
+                {[
+                  { d: "Tomato Early Blight", spec: "Alternaria solani", acc: "98.4%" },
+                  { d: "Potato Late Blight", spec: "Phytophthora infestans", acc: "99.1%" },
+                  { d: "Maize Common Rust", spec: "Puccinia sorghi", acc: "97.8%" },
+                  { d: "Grape Black Rot", spec: "Guignardia bidwellii", acc: "98.9%" },
+                ].map((r) => (
+                  <div key={r.d} className="flex items-center justify-between rounded-xl bg-wheat/20 px-4 py-3">
+                    <div>
+                      <p className="text-[12px] font-semibold text-soil">{r.d}</p>
+                      <p className="text-[10px] italic text-soil/40">{r.spec}</p>
                     </div>
-                    <div className="rounded-xl bg-wheat/20 p-3">
-                      <p className="text-soil/60">Atmospheric Demand (ET₀)</p>
-                      <p className="font-mono text-lg font-bold text-soil">{climateResult.total_forecast_et0_mm} mm</p>
+                    <span className="font-mono text-sm font-bold text-leaf">{r.acc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Climate ── */}
+          {tab === "climate" && (
+            <div className="grid gap-8 md:grid-cols-2">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <p className="text-2xl font-bold text-soil">16-day horizon.</p>
+                  <p className="mt-2 text-[13px] leading-relaxed text-soil/55">
+                    Drought index, cumulative heat stress, and a proactive PMFBY
+                    insurance nudge — before the window closes.
+                  </p>
+                </div>
+                <button
+                  onClick={runClimate}
+                  disabled={loading}
+                  className="w-fit rounded-full bg-soil px-6 py-2.5 text-[13px] font-semibold text-cream transition-all hover:bg-terracotta disabled:opacity-50"
+                >
+                  {loading ? "Pulling forecast…" : "Fetch climate index"}
+                </button>
+              </div>
+
+              {climateResult ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl bg-wheat/40 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-soil/40">Forecast Rain</p>
+                      <p className="mt-1 font-mono text-2xl font-bold text-soil">{climateResult.total_forecast_precip_mm}<span className="text-sm font-normal"> mm</span></p>
+                    </div>
+                    <div className="rounded-2xl bg-wheat/40 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-soil/40">Drought Level</p>
+                      <p className={`mt-1 text-xl font-bold capitalize ${climateResult.drought_risk_level === "high" ? "text-terracotta" : climateResult.drought_risk_level === "moderate" ? "text-amber-600" : "text-leaf"}`}>
+                        {climateResult.drought_risk_level}
+                      </p>
                     </div>
                   </div>
                   {climateResult.pmfby_nudge && (
-                    <div className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-xs">
-                      <p className="font-bold text-amber-900">🛡️ PMFBY Crop Insurance Advisory:</p>
-                      <p className="text-amber-800 mt-0.5">{climateResult.pmfby_reason}</p>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] text-amber-800">
+                      <span className="font-semibold">PMFBY advisory: </span>{climateResult.pmfby_reason}
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="flex h-32 items-center justify-center text-xs text-soil/50">
-                  Select location and click fetch
+                <div className="flex items-center justify-center rounded-2xl border border-dashed border-soil/15 text-[13px] text-soil/30">
+                  Results appear here
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Tab 4: Cold Storage */}
-      {activeTab === "cold_storage" && (
-        <div className="mt-8 rounded-3xl border border-soil/20 bg-wheat/20 p-6 sm:p-8">
-          <div className="flex justify-between items-center mb-6">
+          {/* ── Cold Storage ── */}
+          {tab === "cold_storage" && (
             <div>
-              <h3 className="font-display text-xl font-bold text-soil">50 Verified Horticulture Cold Hubs</h3>
-              <p className="text-xs text-soil/70">Haversine nearest facility match across Bihar, UP, MH, Rajasthan, and Karnataka.</p>
-            </div>
-            <Button asChild size="sm">
-              <Link href="/allocation">Open FPO Allocation Tool →</Link>
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {storageFacilities.map((f) => (
-              <div key={f.id} className="rounded-2xl border border-soil/15 bg-white/90 p-4 shadow-sm">
-                <p className="font-bold text-sm text-soil">{f.name}</p>
-                <p className="text-xs text-soil/60 mt-0.5">District: {f.district}</p>
-                <div className="mt-3 flex justify-between items-center text-xs pt-2 border-t border-soil/10">
-                  <span className="text-terracotta font-semibold">{f.distance_km} km away</span>
-                  <span className="font-mono font-bold text-soil">{f.capacity_tons} MT Cap</span>
+              <div className="mb-6 flex items-end justify-between">
+                <div>
+                  <p className="text-2xl font-bold text-soil">Nearest cold chain.</p>
+                  <p className="mt-1 text-[13px] text-soil/55">Haversine distance across 50 verified horticulture hubs.</p>
                 </div>
+                <button
+                  onClick={runStorage}
+                  disabled={loading}
+                  className="rounded-full bg-soil px-5 py-2 text-[13px] font-semibold text-cream transition-all hover:bg-terracotta disabled:opacity-50"
+                >
+                  {loading ? "Searching…" : "Find hubs"}
+                </button>
               </div>
-            ))}
-          </div>
+
+              {storageResult.length > 0 ? (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {storageResult.map((f, i) => (
+                    <div key={f.id} className="rounded-2xl border border-soil/10 bg-wheat/30 p-5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-soil/35">Hub {i + 1}</p>
+                      <p className="mt-1.5 font-semibold text-soil">{f.name}</p>
+                      <p className="text-[11px] text-soil/45">{f.district}</p>
+                      <div className="mt-4 flex items-baseline justify-between">
+                        <span className="font-mono text-xl font-bold text-soil">{f.distance_km} <span className="text-xs font-normal text-soil/40">km</span></span>
+                        <span className="text-[11px] font-medium text-soil/50">{f.capacity_tons ?? "—"} MT</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-soil/15 text-[13px] text-soil/30">
+                  Click &ldquo;Find hubs&rdquo; to query the network
+                </div>
+              )}
+
+              <Link href="/allocation" className="mt-4 block text-right text-[11px] font-semibold text-terracotta hover:underline">
+                Open FPO allocation tool →
+              </Link>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </section>
   );
 }

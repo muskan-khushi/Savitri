@@ -132,7 +132,7 @@ export default function DashboardHome() {
             </button>
           </div>
 
-          <Button asChild size="sm" variant="outline" className="border-slate-200 text-xs text-slate-700">
+          <Button asChild size="sm" variant="secondary" className="border-slate-200 text-xs text-slate-700">
             <Link href="/dashboard/my-farm">⚙️ Plot Settings</Link>
           </Button>
         </div>
@@ -260,7 +260,7 @@ export default function DashboardHome() {
                 Layer 1 · Soil Telemetry Digital Twin
               </span>
               <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-mono font-bold text-slate-700">
-                {satellite?.soil_temperature_0cm_c ? `${satellite.soil_temperature_0cm_c}°C Surface` : "28.4°C"}
+                {satellite?.land_surface_temp_c != null ? `${satellite.land_surface_temp_c}°C Surface` : "28.4°C"}
               </span>
             </div>
             <h2 className="mt-1 font-display text-xl font-bold text-slate-900">
@@ -278,7 +278,7 @@ export default function DashboardHome() {
               <div className="flex justify-between items-center text-xs">
                 <span className="font-bold text-amber-950">Topsoil (0–7 cm)</span>
                 <span className="font-mono font-bold text-amber-900">
-                  {satellite ? `${(satellite.soil_moisture_0_to_7cm_m3m3 * 100).toFixed(0)}% VWC` : "34% VWC"}
+                  {satellite ? `${(satellite.soil_moisture.swvl1_0_7cm * 100).toFixed(0)}% VWC` : "34% VWC"}
                 </span>
               </div>
               <div className="mt-2 h-2 w-full rounded-full bg-amber-200/70 overflow-hidden">
@@ -292,7 +292,7 @@ export default function DashboardHome() {
               <div className="flex justify-between items-center text-xs">
                 <span className="font-bold text-emerald-950">Root Zone (7–28 cm)</span>
                 <span className="font-mono font-bold text-emerald-900">
-                  {satellite ? `${(satellite.soil_moisture_7_to_28cm_m3m3 * 100).toFixed(0)}% VWC` : "42% VWC"}
+                  {satellite ? `${(satellite.soil_moisture.swvl2_7_28cm * 100).toFixed(0)}% VWC` : "42% VWC"}
                 </span>
               </div>
               <div className="mt-2 h-2 w-full rounded-full bg-emerald-200/70 overflow-hidden">
@@ -306,7 +306,7 @@ export default function DashboardHome() {
               <div className="flex justify-between items-center text-xs">
                 <span className="font-bold text-blue-950">Deep Subsoil (28–100 cm)</span>
                 <span className="font-mono font-bold text-blue-900">
-                  {satellite ? `${(satellite.soil_moisture_28_to_100cm_m3m3 * 100).toFixed(0)}% VWC` : "51% VWC"}
+                  {satellite ? `${(satellite.soil_moisture.swvl3_28_100cm * 100).toFixed(0)}% VWC` : "51% VWC"}
                 </span>
               </div>
               <div className="mt-2 h-2 w-full rounded-full bg-blue-200/70 overflow-hidden">
@@ -465,7 +465,7 @@ export default function DashboardHome() {
                   </div>
                   <div className="mt-1.5 flex justify-between items-center text-[10px] text-slate-500">
                     <span>District: {fac.district}</span>
-                    <span className="font-mono font-semibold">{fac.capacity_tons.toLocaleString()} MT Capacity</span>
+                    <span className="font-mono font-semibold">{(fac.capacity_tons ?? 0).toLocaleString()} MT Capacity</span>
                   </div>
                 </div>
               ))}
@@ -591,7 +591,7 @@ export default function DashboardHome() {
 
           <div className="mt-5 pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
             <span className="text-slate-500 text-[11px]">Audit: FAO-56 Penman-Monteith (1998)</span>
-            <Button asChild size="sm" variant="outline" className="text-xs">
+            <Button asChild size="sm" variant="ghost" className="text-xs">
               <Link href="/dashboard/impact">Explore Full Impact Terminal →</Link>
             </Button>
           </div>
