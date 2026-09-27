@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { type IrrigationAdvisory, type ClimateRisk, type ColdStorageFacility } from '@/lib/api';
+import { DEMO_IRRIGATION, DEMO_CLIMATE, DEMO_COLD_STORAGE } from "@/lib/mock-data";
+import { DemoBanner } from "@/components/layout/demo-banner";
 
 const LOCATIONS = [
   { name: "Patna, Bihar", lat: 25.594, lon: 85.138, crop: "rice" },
@@ -17,64 +20,64 @@ export function LiveAiShowcase() {
   const [loc, setLoc] = useState(LOCATIONS[0]);
   const [crop, setCrop] = useState("rice");
   const [das, setDas] = useState(45);
-  const [irrigResult, setIrrigResult] = useState<any>(null);
-  const [climateResult, setClimateResult] = useState<any>(null);
-  const [storageResult, setStorageResult] = useState<any[]>([]);
+  const [irrigResult, setIrrigResult] = useState<IrrigationAdvisory | null>(null);
+  const [climateResult, setClimateResult] = useState<ClimateRisk | null>(null);
+  const [storageResult, setStorageResult] = useState<ColdStorageFacility[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
   async function runIrrigation() {
     setLoading(true);
+    setError(null);
     try {
-      const r = await fetch("http://localhost:8000/api/v1/irrigation-advisory", {
+      const r = await fetch(`${API_BASE}/api/v1/irrigation-advisory`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lat: loc.lat, lon: loc.lon, crop, days_after_sowing: das }),
       });
       if (r.ok) setIrrigResult(await r.json());
-    } catch {
-      setIrrigResult({
-        date: new Date().toISOString().split("T")[0],
-        crop, growth_stage: "mid-season",
-        t_max_c: 31.4, t_min_c: 24.8, precipitation_mm: 0,
-        et0_mm_day: 4.35, kc: 1.15, etc_mm_day: 5.0,
-        effective_rainfall_mm: 0, net_irrigation_mm: 5.0,
-        should_irrigate: true,
-        recommendation_text: "Irrigate today — apply 5.0 mm. Atmospheric demand exceeds available soil moisture.",
-      });
+      else {
+        setIrrigResult(DEMO_IRRIGATION);
+        setIsDemo(true);
+      }
+    } catch (err) {
+      setIrrigResult(DEMO_IRRIGATION);
+      setIsDemo(true);
     } finally { setLoading(false); }
   }
 
   async function runClimate() {
     setLoading(true);
+    setError(null);
     try {
-      const r = await fetch(`http://localhost:8000/api/v1/climate-risk?lat=${loc.lat}&lon=${loc.lon}&crop=${crop}`);
+      const r = await fetch(`${API_BASE}/api/v1/climate-risk?lat=${loc.lat}&lon=${loc.lon}&crop=${crop}`);
       if (r.ok) setClimateResult(await r.json());
-    } catch {
-      setClimateResult({
-        forecast_days: 16,
-        total_forecast_precip_mm: 18.4,
-        total_forecast_et0_mm: 58.2,
-        drought_index: 0.68,
-        drought_risk_level: "moderate",
-        heat_stress_level: "mild",
-        pmfby_nudge: true,
-        pmfby_reason: "16-day water deficit exceeds 50% of crop demand threshold.",
-        recommendation_text: "Moderate drought risk. Apply mulch to conserve soil moisture. Consider PMFBY enrollment.",
-      });
+      else {
+        setClimateResult(DEMO_CLIMATE);
+        setIsDemo(true);
+      }
+    } catch (err) {
+      setClimateResult(DEMO_CLIMATE);
+      setIsDemo(true);
     } finally { setLoading(false); }
   }
 
   async function runStorage() {
     setLoading(true);
+    setError(null);
     try {
-      const r = await fetch(`http://localhost:8000/api/v1/cold-storage/nearest?lat=${loc.lat}&lon=${loc.lon}&limit=3`);
+      const r = await fetch(`${API_BASE}/api/v1/cold-storage/nearest?lat=${loc.lat}&lon=${loc.lon}&limit=3`);
       if (r.ok) setStorageResult(await r.json());
-    } catch {
-      setStorageResult([
-        { id: 1, name: "Patna Cold Storage Complex", district: "Patna", distance_km: 4.2, capacity_tons: 1200 },
-        { id: 2, name: "Bihar State Warehousing Corp", district: "Muzaffarpur", distance_km: 68.5, capacity_tons: 800 },
-        { id: 3, name: "Nalanda Vegetable Cold Store", district: "Nalanda", distance_km: 74.1, capacity_tons: 400 },
-      ]);
+      else {
+        setStorageResult(DEMO_COLD_STORAGE);
+        setIsDemo(true);
+      }
+    } catch (err) {
+      setStorageResult(DEMO_COLD_STORAGE);
+      setIsDemo(true);
     } finally { setLoading(false); }
   }
 
@@ -86,11 +89,13 @@ export function LiveAiShowcase() {
   ] as const;
 
   return (
-    <section className="border-t border-soil/8 bg-wheat/20 py-24">
-      <div className="mx-auto max-w-6xl px-6">
-
-        {/* Section label */}
-        <div className="mb-12 grid grid-cols-1 gap-8 md:grid-cols-2 md:items-end">
+    <>
+      {isDemo && <DemoBanner />}
+      <section className="border-t border-soil/8 bg-wheat/20 py-24">
+        <div className="mx-auto max-w-6xl px-6">
+          
+          {/* Section label */}
+          <div className="mb-12 grid grid-cols-1 gap-8 md:grid-cols-2 md:items-end">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-terracotta">
               Live Engine
@@ -171,7 +176,7 @@ export function LiveAiShowcase() {
 
         {/* Panel */}
         <div className="min-h-[340px] rounded-3xl border border-soil/10 bg-white/80 p-8 shadow-sm">
-
+          {error && <p className="text-sm text-terracotta/70 text-center py-8">{error}</p>}
           {/* ── Irrigation ── */}
           {tab === "irrigation" && (
             <div className="grid gap-8 md:grid-cols-2">
@@ -371,5 +376,6 @@ export function LiveAiShowcase() {
         </div>
       </div>
     </section>
+    </>
   );
 }

@@ -7,15 +7,27 @@ services:
     ports:
       - "8000:8000"
     environment:
+      # CORS: allow browser requests from the host machine on port 3000
       - ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
       - DATABASE_URL=sqlite+aiosqlite:///./savitri_dev.db
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - DATA_GOV_API_KEY=${DATA_GOV_API_KEY:-}
       - BHASHINI_USER_ID=${BHASHINI_USER_ID:-}
       - BHASHINI_API_KEY=${BHASHINI_API_KEY:-}
+      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN:-}
+      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID:-}
+      - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN:-}
     volumes:
       - ./backend/savitri_dev.db:/app/savitri_dev.db
       - ./backend/ml/checkpoints:/app/ml/checkpoints
+    # Health check: wait until FastAPI /health returns 200 before
+    # marking the container healthy (frontend depends_on this).
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   frontend:
@@ -26,7 +38,14 @@ services:
     ports:
       - "3000:3000"
     environment:
+      # NEXT_PUBLIC_ vars are baked at BUILD time, not runtime.
+      # All our API calls are client-side (browser → host:8000),
+      # so localhost:8000 is correct here — the user's browser
+      # can reach it directly on the host network.
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
-      - backend
+      backend:
+        # Wait for the backend health check to pass before starting
+        # the frontend container — prevents 502s on first page load.
+        condition: service_healthy
     restart: unless-stopped

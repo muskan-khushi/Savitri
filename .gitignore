@@ -165,3 +165,16 @@ Desktop.ini
 # ==============================
 .cache/
 .turbo/
+
+# ==============================
+# Internal Working Documents (not for public repo)
+# ==============================
+brainstorming.MD
+brainstorming.md
+technicalPlan.MD
+technicalPlan.md
+ui.md
+UI.md
+SAVITRI_MASTER_UI_PLAN.md
+*.internal.md
+.docs/private/

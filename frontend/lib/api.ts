@@ -26,11 +26,29 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Thrown when the backend is completely unreachable (network error / CORS /
+ * DNS failure). Pages catch this to switch into Demo Mode instead of
+ * showing a crash screen.
+ */
+export class BackendUnavailableError extends Error {
+  constructor(cause?: string) {
+    super(cause ?? "Backend unreachable");
+    this.name = "BackendUnavailableError";
+  }
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+  } catch (networkErr) {
+    // TypeError = "Failed to fetch" — backend is offline or CORS blocked
+    throw new BackendUnavailableError(String(networkErr));
+  }
   if (!res.ok) {
     let detail: string | undefined;
     let message = res.statusText;
@@ -47,6 +65,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
   return res.json() as Promise<T>;
 }
+
 
 async function multipartRequest<T>(
   path: string,
@@ -267,6 +286,10 @@ export async function getClimateRisk(
   return request<ClimateRisk>(`/api/v1/climate-risk?${q}`);
 }
 
+export async function getFarmClimateRisk(farmId: number): Promise<ClimateRisk> {
+  return request<ClimateRisk>(`/api/v1/farms/${farmId}/climate-risk`);
+}
+
 export async function getFieldIndices(
   lat: number,
   lon: number
@@ -355,6 +378,7 @@ export const api = {
   detectDisease,
 
   getClimateRisk,
+  getFarmClimateRisk,
 
   getFieldIndices,
 

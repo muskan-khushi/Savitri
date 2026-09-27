@@ -22,7 +22,8 @@ export default function ImpactPage() {
   const [fpoAcres, setFpoAcres] = useState(25);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/v1/impact/summary")
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+    fetch(`${API_BASE}/api/v1/impact/summary`)
       .then((res) => res.json())
       .then((d) => setData(d))
       .catch(() => {
@@ -74,6 +75,10 @@ export default function ImpactPage() {
         >
           📄 Export Grant Brief
         </Button>
+      </div>
+
+      <div className="mt-6 mb-6 rounded-xl border border-soil/10 bg-wheat/30 px-4 py-3 text-[12px] text-soil/55">
+        <span className="font-semibold">Note:</span> Figures below reflect a 50-farmer FPO baseline model until your farm logs accumulate real data. Connect your farm on <a href="/dashboard/my-farm" className="underline">My Farm</a> to see personalised impact.
       </div>
 
       {/* Primary KPI Ribbon */}

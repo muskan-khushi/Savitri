@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /dashboard
+Allow: /for-farmers
+Allow: /for-partners
+Allow: /how-it-works
+Allow: /story
+
+Disallow: /api/
+Disallow: /onboarding
+Disallow: /allocation
+
+Sitemap: https://savitri.ai/sitemap.xml

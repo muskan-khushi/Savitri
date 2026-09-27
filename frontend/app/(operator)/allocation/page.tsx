@@ -32,8 +32,9 @@ export default function AllocationPage() {
   async function handleCheckAvailability(facId: number) {
     setCheckingAvailability(true);
     try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
       const res = await fetch(
-        `http://localhost:8000/api/v1/cold-storage/${facId}/availability?start_date=${startDate}&end_date=${endDate}`
+        `${API_BASE}/api/v1/cold-storage/${facId}/availability?start_date=${startDate}&end_date=${endDate}`
       );
       if (res.ok) {
         const data = await res.json();

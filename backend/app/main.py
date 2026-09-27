@@ -133,6 +133,11 @@ async def root():
         "cors_origins": ALLOWED_ORIGINS,
     }
 
+@app.get("/health")
+async def health():
+    """Dedicated health-check endpoint used by Docker healthcheck and load balancers."""
+    return {"status": "ok"}
+
 
 # ── Crops ────────────────────────────────────────────────────────────────────
 

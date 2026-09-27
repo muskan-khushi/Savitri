@@ -22,6 +22,10 @@ export const metadata: Metadata = {
   title: "Savitri — Agricultural Intelligence",
   description:
     "Irrigation, crop health, cold chain, and market signals — before the loss happens.",
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

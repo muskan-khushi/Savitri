@@ -40,7 +40,8 @@ export default function MyFarmPage() {
 
   useEffect(() => {
     // 1. Fetch dynamic crops list from backend
-    fetch("http://localhost:8000/api/v1/crops")
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+    fetch(`${API_BASE}/api/v1/crops`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.crops && Array.isArray(data.crops)) {
@@ -114,14 +115,15 @@ export default function MyFarmPage() {
     setError(null);
     setSuccess(null);
 
+    if (!name.trim()) { setError('Farm name is required.'); setSaving(false); return; }
     const latNum = parseFloat(lat);
     const lonNum = parseFloat(lon);
-
-    if (isNaN(latNum) || isNaN(lonNum)) {
-      setError("Please enter valid decimal coordinates for latitude and longitude.");
-      setSaving(false);
-      return;
-    }
+    if (isNaN(latNum) || latNum < 6 || latNum > 38) { setError('Latitude must be between 6° and 38° (India range).'); setSaving(false); return; }
+    if (isNaN(lonNum) || lonNum < 68 || lonNum > 98) { setError('Longitude must be between 68° and 98° (India range).'); setSaving(false); return; }
+    if (!sowingDate) { setError('Sowing date is required.'); setSaving(false); return; }
+    const sowingDateObj = new Date(sowingDate);
+    if (sowingDateObj > new Date()) { setError('Sowing date cannot be in the future.'); setSaving(false); return; }
+    setError(null);
 
     try {
       const created = await api.createFarm({

@@ -156,16 +156,13 @@ export default function CropHealthPage() {
         )}
 
         {state.status === "model-not-trained" && (
-          <div className="rounded-2xl border border-soil/20 bg-wheat/30 p-6">
-            <p className="font-semibold text-soil">Model not trained yet (503)</p>
-            <p className="mt-2 text-sm text-soil/70">
-              The disease-detection model has no checkpoint — it will not fabricate a
-              diagnosis from an untrained network. Train it first:
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm">
+            <p className="font-semibold text-amber-900">Disease detection model loading</p>
+            <p className="mt-1 text-amber-700">
+              {state.detail.includes('503') || state.detail.includes('not trained') || state.detail.includes('checkpoint')
+                ? 'The AI model checkpoint is initialising. If this persists, ensure the model checkpoint is mounted at backend/ml/checkpoints/.'
+                : state.detail}
             </p>
-            <code className="mt-3 block text-xs bg-soil/5 rounded-lg p-3 text-soil/60">
-              python ml/train_disease_model.py
-            </code>
-            <p className="mt-3 text-xs text-soil/40 break-all">{state.detail}</p>
           </div>
         )}
 

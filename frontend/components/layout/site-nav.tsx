@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { label: "Platform", href: "/dashboard" },
-  { label: "Crop Health", href: "/dashboard/crop-health" },
-  { label: "Cold Chain", href: "/allocation" },
+  { label: "For Farmers", href: "/for-farmers" },
+  { label: "For FPOs", href: "/for-partners" },
+  { label: "Our Story", href: "/story" },
   { label: "Impact", href: "/dashboard/impact" },
 ];
 
